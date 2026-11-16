@@ -1,0 +1,49 @@
+Run started:2026-11-16 23:08:06.745977+00:00
+
+Test results:
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Low
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html
+   Location: .\app.py:24:14
+23	    # FALLA (SQLi): concatenación directa de entradas
+24	    query = f"SELECT id, username, nombre_completo, saldo FROM usuarios WHERE nombre_completo LIKE '%{termino}%';"
+25	    try:
+
+--------------------------------------------------
+>> Issue: [B201:flask_debug_true] A Flask app appears to be run with debug=True, which exposes the Werkzeug debugger and allows the execution of arbitrary code.
+   Severity: High   Confidence: Medium
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b201_flask_debug_true.html
+   Location: .\app.py:98:4
+97	    # FALLA: debug=True expone la consola interactiva en caso de excepción
+98	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: .\app.py:98:17
+97	    # FALLA: debug=True expone la consola interactiva en caso de excepción
+98	    app.run(host='0.0.0.0', port=5000, debug=True)
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 71
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 1
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 1
+		Medium: 2
+		High: 0
+Files skipped (0):
