@@ -1,0 +1,77 @@
+                   
+                   
+┌─────────────────┐
+│ 6 Code Findings │
+└─────────────────┘
+               
+    /src/app.py
+    ❯❱ python.django.security.injection.sql.sql-injection-using-db-cursor-execute.sql-injection-db-cursor-execute
+          ❰❰ Blocking ❱❱
+          User-controlled data from a request is passed to 'execute()'. This could lead to a SQL injection and
+          therefore protected information could be leaked. Instead, use django's QuerySets, which are built   
+          with query parameterization and therefore not vulnerable to sql injection. For example, you could   
+          use `Entry.objects.filter(date=2006)`.                                                              
+          Details: https://sg.run/qx7y                                                                        
+                                                                                                              
+           20┆ termino = request.args.get('q', '')
+           21┆ conn = get_connection()
+           22┆ cur = conn.cursor()
+           23┆ # FALLA (SQLi): concatenación directa de entradas
+           24┆ query = f"SELECT id, username, nombre_completo, saldo FROM usuarios WHERE nombre_completo
+               LIKE '%{termino}%';"                                                                     
+           25┆ try:
+           26┆     cur.execute(query)
+           27┆     filas = cur.fetchall()
+           28┆     cur.close()
+           29┆     conn.close()
+             [hid 8 additional lines, adjust with --max-lines-per-finding] 
+   
+   ❯❯❱ python.flask.security.injection.tainted-sql-string.tainted-sql-string
+          ❰❰ Blocking ❱❱
+          Detected user input used to manually construct a SQL string. This is usually bad practice because 
+          manual construction could accidentally result in a SQL injection. An attacker could use a SQL     
+          injection to steal or modify contents of the database. Instead, use a parameterized query which is
+          available by default in most database engines. Alternatively, consider using an object-relational 
+          mapper (ORM) such as SQLAlchemy which will protect your queries.                                  
+          Details: https://sg.run/JxZj                                                                      
+                                                                                                            
+           24┆ query = f"SELECT id, username, nombre_completo, saldo FROM usuarios WHERE nombre_completo
+               LIKE '%{termino}%';"                                                                     
+   
+    ❯❱ python.django.security.injection.raw-html-format.raw-html-format
+          ❰❰ Blocking ❱❱
+          Detected user input flowing into a manually constructed HTML string. You may be accidentally       
+          bypassing secure methods of rendering HTML by manually constructing HTML and this could create a   
+          cross-site scripting vulnerability, which could let attackers steal sensitive user data. To be sure
+          this is safe, check that the HTML is rendered safely. Otherwise, use templates                     
+          (`django.shortcuts.render`) which will safely render HTML instead.                                 
+          Details: https://sg.run/oYj1                                                                       
+                                                                                                             
+           33┆ mensaje = f"<p>Resultados obtenidos para el criterio: {termino}</p>"
+   
+    ❯❱ python.flask.security.injection.raw-html-concat.raw-html-format
+          ❰❰ Blocking ❱❱
+          Detected user input flowing into a manually constructed HTML string. You may be accidentally       
+          bypassing secure methods of rendering HTML by manually constructing HTML and this could create a   
+          cross-site scripting vulnerability, which could let attackers steal sensitive user data. To be sure
+          this is safe, check that the HTML is rendered safely. Otherwise, use templates                     
+          (`flask.render_template`) which will safely render HTML instead.                                   
+          Details: https://sg.run/Pb7e                                                                       
+                                                                                                             
+           33┆ mensaje = f"<p>Resultados obtenidos para el criterio: {termino}</p>"
+   
+    ❯❱ python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host
+          ❰❰ Blocking ❱❱
+          Running flask app with host 0.0.0.0 could expose the server publicly.
+          Details: https://sg.run/eLby                                         
+                                                                               
+           98┆ app.run(host='0.0.0.0', port=5000, debug=True)
+   
+    ❯❱ python.flask.security.audit.debug-enabled.debug-enabled
+          ❰❰ Blocking ❱❱
+          Detected Flask app with debug=True. Do not deploy to production with this flag enabled as it will   
+          leak sensitive information. Instead, consider using Flask configuration variables or setting 'debug'
+          using system environment variables.                                                                 
+          Details: https://sg.run/dKrd                                                                        
+                                                                                                              
+           98┆ app.run(host='0.0.0.0', port=5000, debug=True)
