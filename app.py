@@ -4,7 +4,10 @@ from flask import Flask, request, jsonify, make_response
 from markupsafe import escape
 
 app = Flask(__name__)
+from werkzeug.serving import WSGIRequestHandler
 
+# REMEDIADO: oculta la versión de Werkzeug/Python en la cabecera Server
+WSGIRequestHandler.version_string = lambda self: "webserver"
 
 def get_connection():
     return psycopg2.connect(
@@ -33,9 +36,10 @@ def buscar_socio():
         # REMEDIADO (XSS Reflejado): sin HTML manual y con la entrada escapada
         mensaje = f"Resultados obtenidos para el criterio: {escape(termino)}"
         return make_response(jsonify({"filtro": mensaje, "data": resultados}), 200)
-    except Exception as e:
-        # Fuga de información técnica
-        return jsonify({"error_tecnico": str(e)}), 500
+    except Exception:
+        # REMEDIADO: el detalle se registra en el log del servidor, no se envía al cliente
+        app.logger.exception("Error en /api/socios/buscar")
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 
 # Vulnerabilidad 2: BOLA / IDOR
@@ -113,12 +117,17 @@ def comentarios():
 # Vulnerabilidad 4: Ausencia de cabeceras de seguridad y fuga de servidor
 @app.after_request
 def aplicar_cabeceras(response):
-    # FALLA: se expone el software del servidor y no hay CSP, HSTS ni nosniff
-    response.headers['Server'] = 'Flask-Development-Server/3.0.0 (Ubuntu-Python3.11)'
-    response.headers['X-Powered-By'] = 'Python-Flask-WSGI'
+    # REMEDIADO: se eliminan las cabeceras que revelan el software del servidor
+    response.headers.pop('X-Powered-By', None)
+    response.headers['Server'] = 'webserver'
+    # REMEDIADO: cabeceras defensivas
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; frame-ancestors 'none';"
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return response
 
 
 if __name__ == '__main__':
-    # FALLA: debug=True expone la consola interactiva en caso de excepción
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # REMEDIADO: debug desactivado. El bind a 0.0.0.0 es necesario dentro de Docker
+    app.run(host='0.0.0.0', port=5000, debug=False)  # nosec B104
