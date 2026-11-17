@@ -20,10 +20,10 @@ def buscar_socio():
     termino = request.args.get('q', '')
     conn = get_connection()
     cur = conn.cursor()
-    # FALLA (SQLi): concatenación directa de entradas
-    query = f"SELECT id, username, nombre_completo, saldo FROM usuarios WHERE nombre_completo LIKE '%{termino}%';"
+    # REMEDIADO (SQLi): consulta parametrizada con parámetro posicional %s
+    query = "SELECT id, username, nombre_completo, saldo FROM usuarios WHERE nombre_completo ILIKE %s;"
     try:
-        cur.execute(query)
+        cur.execute(query, (f"%{termino}%",))
         filas = cur.fetchall()
         cur.close()
         conn.close()
