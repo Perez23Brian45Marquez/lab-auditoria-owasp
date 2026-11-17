@@ -41,9 +41,27 @@ def buscar_socio():
 # Vulnerabilidad 2: BOLA / IDOR
 @app.route('/api/socios/<int:usuario_id>/perfil', methods=['GET'])
 def ver_perfil(usuario_id):
-    # FALLA (BOLA): se devuelve info sensible solo por el ID de la URL
+    # REMEDIADO (BOLA): identidad simulada mediante la cabecera X-User-Id
+    try:
+        solicitante_id = int(request.headers.get('X-User-Id', ''))
+    except ValueError:
+        return jsonify({"mensaje": "Identidad requerida"}), 401
+
     conn = get_connection()
     cur = conn.cursor()
+    cur.execute("SELECT rol FROM usuarios WHERE id = %s;", (solicitante_id,))
+    quien = cur.fetchone()
+    if not quien:
+        cur.close()
+        conn.close()
+        return jsonify({"mensaje": "Identidad inválida"}), 401
+
+    # Solo el propio usuario o un administrador puede ver un perfil
+    if solicitante_id != usuario_id and quien[0] != 'admin':
+        cur.close()
+        conn.close()
+        return jsonify({"mensaje": "Acceso denegado"}), 403
+
     cur.execute("SELECT id, username, nombre_completo, ci, saldo, rol FROM usuarios WHERE id = %s;", (usuario_id,))
     u = cur.fetchone()
     cur.close()
