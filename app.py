@@ -1,6 +1,7 @@
 import os
 import psycopg2
 from flask import Flask, request, jsonify, make_response
+from markupsafe import escape
 
 app = Flask(__name__)
 
@@ -29,8 +30,8 @@ def buscar_socio():
         conn.close()
         resultados = [{"id": f[0], "username": f[1], "nombre": f[2], "saldo": float(f[3])} for f in filas]
 
-        # FALLA (XSS Reflejado): reflejo de 'q' sin sanitizar
-        mensaje = f"<p>Resultados obtenidos para el criterio: {termino}</p>"
+        # REMEDIADO (XSS Reflejado): sin HTML manual y con la entrada escapada
+        mensaje = f"Resultados obtenidos para el criterio: {escape(termino)}"
         return make_response(jsonify({"filtro": mensaje, "data": resultados}), 200)
     except Exception as e:
         # Fuga de información técnica
@@ -67,10 +68,16 @@ def comentarios():
     conn = get_connection()
     cur = conn.cursor()
     if request.method == 'POST':
-        data = request.get_json() or {}
-        autor = data.get('autor', 'Anonimo')
-        mensaje = data.get('mensaje', '')
-        # Se guarda sin sanear ni validar etiquetas HTML/script
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            data = {}
+        autor = str(data.get('autor', 'Anonimo')).strip()
+        mensaje = str(data.get('mensaje', '')).strip()
+        # REMEDIADO: validación de longitud (evita el error 500 por VARCHAR(50))
+        if not mensaje or len(autor) > 50 or len(mensaje) > 500:
+            cur.close()
+            conn.close()
+            return jsonify({"error": "Datos inválidos"}), 400
         cur.execute("INSERT INTO comentarios (autor, mensaje) VALUES (%s, %s);", (autor, mensaje))
         conn.commit()
         cur.close()
@@ -81,7 +88,8 @@ def comentarios():
         items = cur.fetchall()
         cur.close()
         conn.close()
-        return jsonify([{"autor": i[0], "mensaje": i[1]} for i in items]), 200
+        # REMEDIADO (XSS Almacenado): escape contextual al devolver los datos
+        return jsonify([{"autor": str(escape(i[0])), "mensaje": str(escape(i[1]))} for i in items]), 200
 
 
 # Vulnerabilidad 4: Ausencia de cabeceras de seguridad y fuga de servidor
